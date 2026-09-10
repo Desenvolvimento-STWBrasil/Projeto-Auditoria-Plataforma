@@ -1,0 +1,17 @@
+# Uso: na pasta backend → docker compose up -d
+# Depois use no .env uma DATABASE_URL apontando para 127.0.0.1:3306 (ver .env.example)
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: auditoria-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
+      MYSQL_DATABASE: auditoria
+      MYSQL_USER: auditoria_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}
+    ports:
+      - "3307:3306"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci

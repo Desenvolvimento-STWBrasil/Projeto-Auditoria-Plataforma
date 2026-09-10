@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #ff4d00;
+  --color-dark: #262626;
+  --color-neutral: #c5c6cd;
+  --color-white: #ffffff;
+  --color-surface: #f7f7f9;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-white);
+  color: var(--color-dark);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 md:px-6;
+  }
+
+  .card {
+    border: 1px solid var(--color-neutral);
+    @apply rounded-2xl bg-white p-5 shadow-sm;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: white;
+    @apply rounded-xl px-4 py-2 font-medium text-white transition hover:opacity-90;
+  }
+
+  .btn-secondary {
+    border: 1px solid var(--color-neutral);
+    @apply rounded-xl bg-white px-4 py-2 font-medium transition hover:bg-zinc-100;
+  }
+
+  .btn-danger {
+    background: #dc2626;
+    color: white;
+    @apply rounded-xl px-4 py-2 font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-danger-outline {
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    @apply rounded-xl bg-white px-4 py-2 font-medium transition hover:bg-red-50;
+  }
+
+  .field {
+    border: 1px solid var(--color-neutral);
+    @apply w-full rounded-xl bg-white px-3 py-2 outline-none transition focus:ring-2;
+    --tw-ring-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+
+  .status-chip {
+    @apply rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  /*
+   * Gatilho quadrado e sem borda, para ícone solto ("⋯", "×"). Existe
+   * porque `.btn-secondary` tem borda e `px-4 py-2`: usado num ícone ele
+   * vira um retângulo com o mesmo peso visual da ação primária ao lado,
+   * que é justamente o que a lista de empresas precisava deixar de
+   * fazer. Alvo de 36 px — o mínimo confortável para toque.
+   */
+  .btn-ghost {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-zinc-100 hover:text-(--color-dark) focus-visible:ring-2 focus-visible:outline-none;
+    --tw-ring-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+
+  /*
+   * Superfície de menu suspenso. O `z-20` fica abaixo do `z-50` dos
+   * modais de propósito: menu aberto não pode sobrepor um diálogo.
+   *
+   * Quem usa esta classe precisa de um ancestral `relative` e NENHUM
+   * ancestral com `overflow` — `overflow-x-auto` recorta filho
+   * posicionado em absolute, e o menu simplesmente sumiria.
+   */
+  .menu-panel {
+    border: 1px solid var(--color-neutral);
+    @apply absolute right-0 z-20 mt-1 min-w-44 rounded-xl bg-white py-1 shadow-lg;
+  }
+
+  .menu-item {
+    @apply block w-full px-3 py-2 text-left text-sm transition hover:bg-(--color-surface);
+  }
+
+  /*
+   * Quadro em LINHAS (CA-20, reorientado). Cada coluna do quadro é uma
+   * faixa de largura total, empilhada verticalmente e recolhível
+   * (accordion) — o eixo do quadro girou 90°.
+   *
+   * Com isso a rolagem HORIZONTAL saiu daqui e passou para dentro de
+   * cada faixa (`.board-column-body`). A regra de antes continua valendo
+   * no novo eixo: é sempre um contêiner interno que rola, nunca o
+   * `body`. Se a rolagem tivesse ficado neste nível, a faixa mais cheia
+   * faria a página inteira rolar de lado, levando junto o cabeçalho e a
+   * barra de ação em lote.
+   */
+  .board-scroller {
+    @apply flex w-full flex-col gap-3 pb-4;
+  }
+
+  /*
+   * Faixa de largura total. Sem `max-h`: quem limita a altura do quadro
+   * agora é o accordion — faixa recolhida não renderiza corpo nenhum, e
+   * é justamente isso que evita expor todos os cards de uma vez.
+   */
+  .board-column {
+    border: 1px solid var(--color-neutral);
+    @apply flex w-full flex-col rounded-xl bg-(--color-surface);
+  }
+
+  /* A rolagem HORIZONTAL é por dentro da faixa (CA-20). */
+  .board-column-body {
+    @apply flex items-start gap-2 overflow-x-auto p-2;
+    scrollbar-gutter: stable;
+  }
+
+  /*
+   * Largura FIXA e não flexível — mesma decisão de antes, aplicada ao
+   * novo eixo: card de largura variável faz a tira "respirar" a cada
+   * card criado, e a posição de destino do arrasto muda debaixo do
+   * cursor.
+   */
+  .board-card {
+    border: 1px solid var(--color-neutral);
+    @apply w-64 shrink-0 rounded-lg bg-white p-2 text-left shadow-sm transition hover:shadow;
+  }
+
+  .board-card-selected {
+    border-color: var(--color-primary);
+    @apply ring-2;
+    --tw-ring-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+
+  /*
+   * A cor de fundo NÃO vem daqui: ela é o hex guardado em
+   * `dashboard_labels.color`, aplicado por `style` inline em
+   * `lib/board-labels.ts`. Tailwind não gera classe para valor dinâmico
+   * vindo do banco, e fingir que gera produziria chip sem cor nenhuma em
+   * produção (só em dev, com o JIT lendo o código-fonte).
+   */
+  .label-chip {
+    @apply inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight;
+  }
+
+  /*
+   * Separador `>>` do Trello. Era um divisor VERTICAL de 40 px entre
+   * colunas; no quadro em linhas ele é a faixa horizontal que separa os
+   * blocos normativos — mesma função, eixo novo.
+   */
+  .board-section-divider {
+    @apply flex w-full items-center rounded-xl bg-(--color-dark) px-4 py-2;
+  }
+}

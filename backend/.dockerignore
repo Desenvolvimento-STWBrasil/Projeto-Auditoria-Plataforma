@@ -1,0 +1,26 @@
+# Segredos — nunca devem entrar na imagem (Dockerfile faz "COPY . .")
+.env
+.env.*
+!.env.example
+
+# Ambiente virtual e caches — não fazem sentido dentro do container
+# (a imagem usa o Python/pip do próprio sistema, ver Dockerfile)
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.coverage
+
+# Dados locais — em runtime, /app/uploads é um volume Docker nomeado
+# (ver docker-compose.yml, backend_uploads:/app/uploads); o conteúdo
+# local não precisa (e não deve) ser copiado para dentro da imagem
+uploads
+
+# Legado / dev-only, sem uso em runtime
+db_auditoria.sql
+tests
+.git
+.gitignore
+README.md

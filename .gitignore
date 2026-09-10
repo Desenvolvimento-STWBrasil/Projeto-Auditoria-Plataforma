@@ -1,0 +1,34 @@
+# ---- Segredos / configuração local ----
+.env
+.env.local
+.env.local.bak
+.env.*.local
+!.env.example
+
+# ---- Python (backend) ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.sqlite3
+
+# ---- Node / Next.js (frontend) ----
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+
+# ---- Uploads de evidências (dados de usuário, não código) ----
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ---- Editor / SO ----
+.DS_Store
+Thumbs.db
+*.log

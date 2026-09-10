@@ -1,0 +1,4 @@
+Generic single-database configuration with Alembic.
+
+This folder is intentionally committed to keep migration history under version control.
+

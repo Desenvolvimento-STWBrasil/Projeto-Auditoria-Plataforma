@@ -1,0 +1,15 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["F"]
+ignore = [
+    # SQLAlchemy usa Mapped["NomeDaClasse"] como forward reference dentro de
+    # relationship() (ver app/models/*.py) — resolvida pelo registry do
+    # SQLAlchemy em runtime, não pelo analisador estático do ruff. Sem este
+    # ignore, o ruff reporta "nome indefinido" para toda classe referenciada
+    # só como string de tipo (Audit, AuditControl, ControlCatalog, Evidence,
+    # Message, User) — confirmado como falso-positivo nesta revisão, não é
+    # um bug real.
+    "F821",
+]

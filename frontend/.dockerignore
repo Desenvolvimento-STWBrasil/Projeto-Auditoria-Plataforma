@@ -1,0 +1,21 @@
+# Segredos — nunca devem entrar na imagem/no contexto de build
+# (Dockerfile faz "COPY . ." no estágio builder)
+.env
+.env.*
+
+# node_modules já é copiado explicitamente do estágio "deps" via
+# "COPY --from=deps" — copiá-lo de novo aqui só desperdiça contexto
+# de build (centenas de MB) e pode sobrescrever com uma versão errada
+node_modules
+
+# Builds anteriores/caches locais — o build de produção deve ser
+# gerado do zero dentro do container, nunca reaproveitar um .next local
+.next
+out
+
+# Dev-only, sem uso no build de produção
+.git
+.gitignore
+README.md
+*.md
+tsconfig.tsbuildinfo
