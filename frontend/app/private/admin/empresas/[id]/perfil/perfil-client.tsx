@@ -159,7 +159,7 @@ export function PerfilClient({ initialDetail }: PerfilClientProps) {
               <ul className="mt-3 space-y-1 rounded-lg bg-red-50 p-3 text-sm text-red-800">
                 <li>
                   • O usuário principal ({detail.principal_full_name}) e{" "}
-                  {detail.sub_user_count} sub-usuário(s)
+                  {detail.sub_user_count} colaborador(es)
                 </li>
                 <li>
                   • {detail.audit_count} auditoria(s), com controles, evidências

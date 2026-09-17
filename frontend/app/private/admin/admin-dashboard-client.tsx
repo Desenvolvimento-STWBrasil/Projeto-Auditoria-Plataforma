@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client";
 
 import { useState, useTransition } from "react";
@@ -10,7 +9,8 @@ import {
   rejectSubUserRequestAction,
 } from "./actions";
 import { CompanyAdminListItem } from "./empresas/actions";
-import { controlStatusAccentClass } from "@/lib/control-status";
+import { PageHeader } from "../_components/page-header";
+import { StatusSummaryCards } from "../_components/status-summary-cards";
 import Link from "next/link";
 
 type AdminDashboardClientProps = {
@@ -53,7 +53,7 @@ export function AdminDashboardClient({
   }
 
   function rejectRequest(id: number) {
-    if (!window.confirm("Recusar esta solicitação de sub-usuário?")) return;
+    if (!window.confirm("Recusar esta solicitação de colaborador?")) return;
 
     setRejectingRequestId(id);
     startTransition(async () => {
@@ -70,54 +70,18 @@ export function AdminDashboardClient({
   return (
     <main className="min-h-screen bg-(--color-surface) py-8">
       <div className="container-page space-y-6">
-        <header className="card">
-          <h1 className="text-2xl font-semibold text-(--color-dark)">Resumo</h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            Visão agregada da auditoria em todos os clientes — para trabalhar os
-            cards de uma empresa, entre em "Empresas" e escolha "Configurar".
-          </p>
-        </header>
+        <PageHeader
+          title="Resumo"
+          description='Visão agregada da auditoria em todos os clientes — para trabalhar os cards de uma empresa, entre em "Empresas" e escolha "Configurar".'
+        />
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="card">
-            <p className="text-sm text-zinc-600">Em análise</p>
-            <p
-              className={`mt-2 text-3xl font-semibold ${controlStatusAccentClass("EM_ANALISE")}`}
-            >
-              {statusSummary.em_analise}
-            </p>
-          </article>
-          <article className="card">
-            <p className="text-sm text-zinc-600">Parcial</p>
-            <p
-              className={`mt-2 text-3xl font-semibold ${controlStatusAccentClass("PARCIAL")}`}
-            >
-              {statusSummary.parcial}
-            </p>
-          </article>
-          <article className="card">
-            <p className="text-sm text-zinc-600">Conforme</p>
-            <p
-              className={`mt-2 text-3xl font-semibold ${controlStatusAccentClass("CONFORME")}`}
-            >
-              {statusSummary.conforme}
-            </p>
-          </article>
-          <article className="card">
-            <p className="text-sm text-zinc-600">Não conforme</p>
-            <p
-              className={`mt-2 text-3xl font-semibold ${controlStatusAccentClass("NAOCONFORME")}`}
-            >
-              {statusSummary.naoconforme}
-            </p>
-          </article>
-        </section>
+        <StatusSummaryCards summary={statusSummary} />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="card">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-(--color-dark)">
-                Solicitações pendentes de sub-usuário
+                Solicitações pendentes de colaborador
               </h2>
               <span className="text-sm text-zinc-500">
                 {pendingRequests.length} pendente(s)
@@ -253,7 +217,7 @@ export function AdminDashboardClient({
                       {company.name}
                     </p>
                     <p className="text-xs text-zinc-500">
-                      {company.sub_user_count} sub-usuário(s)
+                      {company.sub_user_count} colaborador(es)
                     </p>
                   </div>
                   <Link

@@ -58,7 +58,7 @@ export function DeleteCompanyModal({
         <ul className="mt-3 space-y-1 rounded-lg bg-red-50 p-3 text-sm text-red-800">
           <li>
             • O usuário principal ({impact.principal_full_name}) e{" "}
-            {impact.sub_user_count} sub-usuário(s)
+            {impact.sub_user_count} colaborador(es)
           </li>
           <li>
             • {impact.audit_count} auditoria(s), com todos os controles,

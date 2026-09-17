@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { tabItemClass } from "@/lib/tab-styles";
 
 const TABS = [
   { segment: "perfil", label: "Perfil" },
@@ -26,11 +27,7 @@ export function CompanyTabsNav({ companyId }: { companyId: number }) {
             key={tab.segment}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`shrink-0 rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition ${
-              active
-                ? "border-(--color-primary) text-(--color-primary)"
-                : "border-transparent text-zinc-600 hover:text-(--color-dark)"
-            }`}
+            className={tabItemClass(active)}
           >
             {tab.label}
           </Link>

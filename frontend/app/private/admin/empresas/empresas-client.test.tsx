@@ -91,11 +91,11 @@ describe("EmpresasClient", () => {
     expect(within(tabela).getAllByText(mesmoEmail)).toHaveLength(1);
   });
 
-  it("mantém os sub-usuários na página, recolhidos até o clique", async () => {
+  it("mantém os colaboradores na página, recolhidos até o clique", async () => {
     const user = userEvent.setup();
     renderizar([empresa()]);
 
-    const chip = screen.getAllByText("2 sub-usuários")[0];
+    const chip = screen.getAllByText("2 colaboradores")[0];
     expect(
       screen.queryAllByText("patricia.almeida@horizonteconstrutora.com.br")[0],
     ).not.toBeVisible();
@@ -107,12 +107,12 @@ describe("EmpresasClient", () => {
     ).toBeVisible();
   });
 
-  it("mostra travessão para empresa sem sub-usuário", () => {
+  it("mostra travessão para empresa sem colaborador", () => {
     renderizar([empresa({ sub_user_count: 0, sub_user_emails: [] })]);
 
-    expect(screen.getAllByLabelText("Sem sub-usuários").length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByLabelText("Sem colaboradores").length,
+    ).toBeGreaterThan(0);
   });
 
   it("abre o menu de ações com Editar e Excluir, e fecha no Escape", async () => {

@@ -50,12 +50,12 @@ def send_sub_user_credentials_email(
         return False
 
     msg = EmailMessage()
-    msg["Subject"] = "Acesso de sub-usuário — Plataforma de Auditoria"
+    msg["Subject"] = "Acesso de colaborador — Plataforma de Auditoria"
     msg["From"] = settings.SMTP_FROM
     msg["To"] = to_email
     msg.set_content(
         f"Olá, {sub_user_name}.\n\n"
-        f"Você foi adicionado como sub-usuário de {principal_name}.\n\n"
+        f"Você foi adicionado como colaborador de {principal_name}.\n\n"
         f"Use as seguintes credenciais para acessar o sistema:\n\n"
         f"E-mail: {to_email}\n"
         f"Senha temporária: {temporary_password}\n\n"

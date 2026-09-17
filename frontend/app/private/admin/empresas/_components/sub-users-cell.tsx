@@ -31,19 +31,19 @@ export function SubUsersCell({
 }: SubUsersCellProps) {
   if (count === 0) {
     return (
-      <span className="text-sm text-zinc-400" aria-label="Sem sub-usuários">
+      <span className="text-sm text-zinc-400" aria-label="Sem colaboradores">
         —
       </span>
     );
   }
 
-  const rotulo = `${count} sub-usuário${count > 1 ? "s" : ""}`;
+  const rotulo = `${count} colaborador${count > 1 ? "es" : ""}`;
 
   return (
     <details className="group">
       <summary
         className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200"
-        title={`Ver os sub-usuários de ${companyName}`}
+        title={`Ver os colaboradores de ${companyName}`}
       >
         <span
           aria-hidden="true"

@@ -66,7 +66,7 @@ def test_email_do_sub_usuario_continua_dizendo_sub_usuario(capturar_emails):
     assert entregue is True
     corpo = capturar_emails[0].get_content()
 
-    assert "sub-usuário de Maria Silva" in corpo
+    assert "colaborador de Maria Silva" in corpo
     assert "Olá, João Souza" in corpo
     assert "Senha-Temp-34" in corpo
 

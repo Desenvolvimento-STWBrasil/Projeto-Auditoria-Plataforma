@@ -71,3 +71,4 @@ class UserPublic(BaseModel):
     full_name: str
     email: EmailStr
     role: str
+    company_name: str | None = None

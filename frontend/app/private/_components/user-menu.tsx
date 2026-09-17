@@ -13,7 +13,7 @@ import {
 const ROLE_LABEL: Record<SessionProfile["role"], string> = {
   admin: "Administrador",
   user: "Cliente",
-  "sub-user": "Sub-usuário",
+  "sub-user": "Colaborador",
 };
 
 // Intervalo de polling do badge de não lidas do admin — sem WebSocket/

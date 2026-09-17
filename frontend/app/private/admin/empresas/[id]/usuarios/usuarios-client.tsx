@@ -37,7 +37,7 @@ export function UsuariosClient({
   }
 
   function reject(id: number) {
-    if (!window.confirm("Recusar esta solicitação de sub-usuário")) return;
+    if (!window.confirm("Recusar esta solicitação de colaborador")) return;
     setBusyId(id);
     startTransition(async () => {
       const result = await rejectSubUserRequestAction(id);
@@ -63,11 +63,11 @@ export function UsuariosClient({
 
         <section className="card max-w-xl">
           <h2 className="text-base font-semibold text-(--color-dark)">
-            Sub-usuários ({company.sub_user_count})
+            Colaboradores ({company.sub_user_count})
           </h2>
           {company.sub_user_emails.length === 0 ? (
             <p className="mt-2 text-sm text-zinc-600">
-              Nenhum sub-usuário aprovado ainda.
+              Nenhum colaborador aprovado ainda.
             </p>
           ) : (
             <ul className="mt-3 space-y-1 text-sm text-zinc-700">
