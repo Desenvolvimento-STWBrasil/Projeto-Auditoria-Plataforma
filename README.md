@@ -215,6 +215,18 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
+### Opção C — Deploy em produção (Docker Compose + Nginx + CI/CD)
+
+A stack de produção roda em 4 serviços (`mysql`, `backend`, `frontend`, `nginx`),
+com o Nginx como único ponto de entrada público (TLS via Let's Encrypt) e deploy
+automatizado por push na `main` via GitHub Actions.
+
+- Arquivos: `docker-compose.prod.yml`, `nginx/nginx.conf`, `.env.prod.example`,
+  `.github/workflows/deploy.yml`.
+- Guia completo (passo a passo, primeiro deploy manual, troubleshooting):
+  [`docs/Code.md`](docs/Code.md#7-guia-prático-de-execução).
+- Decisões e justificativas de arquitetura: [`docs/prd_deploy_producao.md`](docs/prd_deploy_producao.md).
+
 ---
 
 ## Como Usar
