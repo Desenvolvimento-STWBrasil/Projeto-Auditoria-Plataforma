@@ -164,4 +164,50 @@ a {
   .board-section-divider {
     @apply flex w-full items-center rounded-xl bg-(--color-dark) px-4 py-2;
   }
+
+  /*
+   * Quadro Kanban por STATUS (4 colunas fixas — Cliente/Colaborador).
+   * Diferente do `.board-*` acima (CA-20, colunas livres de template): com
+   * só 4 colunas o layout cabe lado a lado em telas largas (`lg:grid`), e
+   * vira uma tira com scroll-snap nas estreitas — nunca o accordion
+   * vertical, que existe para resolver um problema de ESCALA (25 colunas)
+   * que este quadro não tem.
+   */
+  .status-board {
+    @apply flex snap-x snap-proximity gap-4 overflow-x-auto pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible;
+    scrollbar-gutter: stable;
+  }
+
+  .status-column {
+    border: 1px solid var(--color-neutral);
+    @apply flex w-72 shrink-0 snap-start flex-col rounded-xl bg-(--color-surface) sm:w-80 lg:w-auto lg:shrink;
+  }
+
+  .status-column-header {
+    @apply flex items-center justify-between border-b border-(--color-neutral) px-3 py-2;
+  }
+
+  .status-column-count {
+    @apply rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-semibold text-zinc-700;
+  }
+
+  .status-column-body {
+    @apply flex flex-col gap-2 overflow-y-auto p-3;
+    max-height: calc(100vh - 20rem);
+  }
+
+  .status-column-empty {
+    @apply py-6 text-center text-xs text-zinc-400;
+  }
+
+  .status-card {
+    border: 1px solid var(--color-neutral);
+    @apply w-full rounded-lg bg-white p-3 text-left shadow-sm transition hover:shadow;
+  }
+
+  .status-card-selected {
+    border-color: var(--color-primary);
+    @apply ring-2;
+    --tw-ring-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
 }

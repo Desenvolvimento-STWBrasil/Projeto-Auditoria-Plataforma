@@ -1,5 +1,5 @@
 import { callBackend } from "@/lib/server-backend";
-import { getAccessToken, requireClient } from "@/lib/session";
+import { getAccessToken, getCurrentUserProfile, requireClient } from "@/lib/session";
 import { ClientDashboardClient } from "./client-dashboard-client";
 import {
   ChatMessage,
@@ -21,6 +21,7 @@ type ClientControlApi = {
 export default async function ClientPage() {
   const user = await requireClient();
   const token = await getAccessToken();
+  const profile = await getCurrentUserProfile();
 
   const rawControles = await callBackend<ClientControlApi[]>(
     "/api/v1/client/controls",
@@ -65,6 +66,7 @@ export default async function ClientPage() {
       initialControles={initialControles}
       role={user.role}
       userId={user.id}
+      companyName={profile?.company_name ?? null}
       initialSubUserRequests={initialSubUserRequests}
     />
   );

@@ -18,6 +18,7 @@ export type SessionProfile = {
   full_name: string;
   email: string;
   role: SessionRole;
+  company_name: string | null;
 };
 
 const JWT_SECRET = process.env.JWT_SECRET;
