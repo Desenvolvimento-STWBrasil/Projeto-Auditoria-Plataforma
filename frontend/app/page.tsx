@@ -107,7 +107,7 @@ export default function Home() {
                     href="/private/client"
                     className="btn-secondary text-center"
                   >
-                    Dashboard Cliente
+                    Dashboard Clientes
                   </Link>
                 </div>
               </div>
