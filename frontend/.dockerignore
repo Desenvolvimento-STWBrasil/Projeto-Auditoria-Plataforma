@@ -1,3 +1,4 @@
+# /frontend/.dockerignore
 # Segredos — nunca devem entrar na imagem/no contexto de build
 # (Dockerfile faz "COPY . ." no estágio builder)
 .env

@@ -1,5 +1,8 @@
 # ---- Segredos / configuração local ----
 .env
+.env.prod
+.env.prod*
+!.env.prod.example
 .env.local
 .env.local.bak
 .env.*.local
