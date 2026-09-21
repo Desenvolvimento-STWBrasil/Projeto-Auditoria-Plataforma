@@ -79,13 +79,13 @@ alembic upgrade head
 Cria o usuário admin:
 
 ```bash
-ADMIN_EMAIL=admin@auditoria.local ADMIN_PASSWORD=senha_forte python scripts/seed_admin.py
+ADMIN_EMAIL=admin@auditoria.local ADMIN_PASSWORD=senha_forte python -m scripts.seed_admin
 ```
 
 Popula o catálogo de controles:
 
 ```bash
-python scripts/seed_catalog.py
+python -m scripts.seed_catalog
 ```
 
 ---

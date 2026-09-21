@@ -51,7 +51,7 @@ def downgrade() -> None:
     # Recria o schema exatamente como definido em 86f95e525db1 (estado real
     # em produção/dev no momento desta migration), para permitir rollback
     # sem perda de estrutura — os dados de seed removidos não são restaurados
-    # automaticamente (rodar `python scripts/seed_catalog.py` não repõe o
+    # automaticamente (rodar `python -m scripts.seed_catalog` não repõe o
     # checklist, que deixou de existir no script após esta remoção).
     op.create_table(
         "checklist_items",

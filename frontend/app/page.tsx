@@ -129,6 +129,3 @@ export default function Home() {
     </>
   );
 }
-
-/* Fase 6 - Fundação do Frontend */
-/* Começar as implementações front end */

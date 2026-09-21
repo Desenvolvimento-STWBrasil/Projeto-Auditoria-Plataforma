@@ -4,8 +4,8 @@ registro correspondente em `evidences.storage_key` — órfãos deixados por
 exclusões de empresa anteriores à correção de B-A26.
 
 Uso:
-    python scripts/prune_orphan_uploads.py           # só relata
-    python scripts/prune_orphan_uploads.py --apply   # remove de fato
+    python -m scripts.prune_orphan_uploads           # só relata
+    python -m scripts.prune_orphan_uploads --apply   # remove de fato
 """
 
 from __future__ import annotations

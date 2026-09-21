@@ -2,9 +2,9 @@
 set -e
 
 echo "Aplicando migrations (alembic upgrade head)..."
-python -m alembic upgrade head
+alembic upgrade head
 
 echo "Garantindo usuário admin (idempotente)..."
-python scripts/seed_admin.py || true
+python -m scripts.seed_admin || true
 
 exec "$@"

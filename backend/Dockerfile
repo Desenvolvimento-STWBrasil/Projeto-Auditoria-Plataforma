@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && groupadd -r appgroup && useradd -r -g appgroup -d /app appuser
 
 COPY --from=builder /root/.local /home/appuser/.local
-ENV PATH=/home/appuser/.local/bin:$PATH \
+ENV HOME=/home/appuser \
+    PATH=/home/appuser/.local/bin:$PATH \
     PYTHONUNBUFFERED=1
 
 COPY --chown=appuser:appgroup . .

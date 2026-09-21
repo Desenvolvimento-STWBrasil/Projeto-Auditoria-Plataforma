@@ -13,7 +13,7 @@ Reaproveita a mesma função de serviço usada pelo onboarding
 (app.services.dashboard_builder.create_company_dashboard_from_template) para
 que o resultado seja idêntico ao de uma empresa criada pelo fluxo normal.
 
-Uso: python scripts/backfill_company_cliente01.py
+Uso: python -m scripts.backfill_company_cliente01
 """
 
 from __future__ import annotations

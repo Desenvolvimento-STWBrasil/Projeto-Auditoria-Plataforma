@@ -273,7 +273,7 @@ def main() -> None:
             admin = db.scalar(select(User).where(User.role == "admin"))
             if admin is None:
                 raise RuntimeError(
-                    "Nenhum usuário admin encontrado — rode scripts/seed_admin.py primeiro."
+                    "Nenhum usuário admin encontrado — rode python -m scripts.seed_admin primeiro."
                 )
 
             seed_controls(db, SEED_CONTROLS)
