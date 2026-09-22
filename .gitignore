@@ -35,3 +35,6 @@ backend/uploads/*
 .DS_Store
 Thumbs.db
 *.log
+
+# ---- Documentação interna (mantida fora do repositório) ----
+/docs/
