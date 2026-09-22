@@ -110,6 +110,11 @@ jobs:
             # e o seed do admin sozinho ao subir — não repetir aqui.
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
+            # nginx.conf é montado como arquivo único: o "git reset --hard"
+            # troca o arquivo (novo inode) e o container continuaria lendo a
+            # versão antiga. Recriar garante que a config atual seja carregada.
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate --no-deps nginx
+
             # Smoke test: espera o backend responder saudável antes de
             # considerar o deploy concluído.
             for i in $(seq 1 15); do
