@@ -1,9 +1,13 @@
 "use client";
 
 import { ModalShell } from "@/app/private/_components/modal-shell";
-import { controlStatusBadgeClass, controlStatusLabel } from "@/lib/control-status";
+import {
+  controlStatusBadgeClass,
+  controlStatusLabel,
+} from "@/lib/control-status";
 import { tabItemClass } from "@/lib/tab-styles";
 import type { Controle } from "./types";
+import { MAX_EVIDENCE_MB } from "@/lib/upload-limits";
 
 export const DETAIL_TABS = [
   { key: "detalhes", label: "Detalhes" },
@@ -47,7 +51,9 @@ export function ControlDetailModal({
       onClose={onClose}
       maxWidthClass="max-w-2xl"
     >
-      <span className={`mt-1 inline-block ${controlStatusBadgeClass(controle.status)}`}>
+      <span
+        className={`mt-1 inline-block ${controlStatusBadgeClass(controle.status)}`}
+      >
         {controlStatusLabel(controle.status)}
       </span>
 
@@ -95,6 +101,8 @@ export function ControlDetailModal({
                   disabled={isUploading}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
+                    /* Limpa a seleção: sem isso, escolher o MESMO arquivo de novo (ex.: Após um erro) não dispara onChange */
+                    e.target.value = "";
                     if (file) onUploadEvidence(file);
                   }}
                 />
@@ -113,7 +121,7 @@ export function ControlDetailModal({
             </ul>
             <p className="mt-3 text-xs text-zinc-500">
               Formatos permitidos: PDF / PNG / JPG / JPEG / WEBP / DOCX / XLSX |
-              Tamanho máximo: 10MB
+              Tamanho máximo: {MAX_EVIDENCE_MB} MB
             </p>
           </div>
         ) : null}
@@ -129,7 +137,9 @@ export function ControlDetailModal({
                 <div
                   key={`${item.autor}-${index}`}
                   className={`rounded-lg p-3 text-sm ${
-                    item.autor === "CLIENTE" ? "bg-blue-50 text-right" : "bg-zinc-50"
+                    item.autor === "CLIENTE"
+                      ? "bg-blue-50 text-right"
+                      : "bg-zinc-50"
                   }`}
                 >
                   <p className="font-semibold">

@@ -11,10 +11,14 @@ import {
 } from "./actions";
 import { AddCollaboratorModal } from "./_components/add-collaborator-modal";
 import { StatusKanbanBoard } from "./_components/status-kanban-board";
-import { ControlDetailModal, type DetailTabKey } from "./_components/control-detail-modal";
+import {
+  ControlDetailModal,
+  type DetailTabKey,
+} from "./_components/control-detail-modal";
 import type { AutorConversa, Controle } from "./_components/types";
 import { PageHeader } from "../_components/page-header";
 import { StatusSummaryCards } from "../_components/status-summary-cards";
+import { evidenceSizeError } from "@/lib/upload-limits";
 
 type ClientDashboardClientProps = {
   initialControles: Controle[];
@@ -46,9 +50,10 @@ export function ClientDashboardClient({
 
   const [subUserName, setSubUserName] = useState("");
   const [subUserEmail, setSubUserEmail] = useState("");
-  const [subReqMsg, setSubReqMsg] = useState<
-    { type: "success" | "error"; text: string } | null
-  >(null);
+  const [subReqMsg, setSubReqMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [subUserRequests, setSubUserRequests] = useState<MySubUserRequest[]>(
     initialSubUserRequests,
   );
@@ -134,25 +139,38 @@ export function ClientDashboardClient({
     if (!controleSelecionado) return;
     const auditControlId = Number(controleSelecionado.id);
 
+    /* Recusa no navegador o que o servidor recusaria de qualquer jeito
+    evita subir o arquivo inteiro só para receber um error */
+    const erroTamanho = evidenceSizeError(file);
+    if (erroTamanho) {
+      window.alert(erroTamanho);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
     setIsUploading(true);
     startTransition(async () => {
-      const result = await uploadEvidenceAction(auditControlId, formData);
-      if (result.ok) {
-        setFileName(result.fileName);
-        setControles((prev) =>
-          prev.map((c) =>
-            c.id === controleSelecionadoId
-              ? { ...c, evidencias: [...c.evidencias, result.fileName] }
-              : c,
-          ),
-        );
-      } else {
-        window.alert(result.message);
+      try {
+        const result = await uploadEvidenceAction(auditControlId, formData);
+        if (result.ok) {
+          setFileName(result.fileName);
+          setControles((prev) =>
+            prev.map((c) =>
+              c.id === controleSelecionadoId
+                ? { ...c, evidencias: [...c.evidencias, result.fileName] }
+                : c,
+            ),
+          );
+        } else {
+          window.alert(result.message);
+        }
+      } catch {
+        window.alert("Não foi possível enviar a evidência. Tente novamente");
+      } finally {
+        setIsUploading(false);
       }
-      setIsUploading(false);
     });
   }
 
