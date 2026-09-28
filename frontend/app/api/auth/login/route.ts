@@ -1,3 +1,4 @@
+import { isSecureCookie } from "@/lib/cookie-security";
 import { callBackend } from "@/lib/server-backend";
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set("access_token", data.access_token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
       path: "/",
       maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
     });
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set("refresh_token", data.refresh_token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
       path: "/",
       maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
     });
