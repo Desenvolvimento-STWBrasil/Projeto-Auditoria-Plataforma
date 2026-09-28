@@ -149,8 +149,12 @@ jobs:
       - name: Lint (eslint)
         run: npm run lint
 
+      # PageProps, LayoutProps e RouteContext são tipos globais que o Next
+      # gera em .next/types; num checkout limpo eles ainda não existem.
       - name: Tipos (tsc)
-        run: npx tsc --noEmit
+        run: |
+          npx next typegen
+          npx tsc --noEmit
 
       - name: Testes (vitest)
         run: npm test
