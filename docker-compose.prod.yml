@@ -68,6 +68,9 @@ services:
       backend:
         condition: service_healthy
     environment:
+      # Endereço PÚBLICO que o navegador usa. Define a flag Secure dos cookies
+      # (lib/cookie-security.ts): http://IP hoje, https://dominio depois.
+      APP_URL: ${APP_URL:?defina APP_URL no .env.prod (http://IP hoje, https://dominio depois)}
       BACKEND_API_URL: http://backend:8000
       JWT_SECRET: ${JWT_SECRET:?defina no .env.prod}
       JWT_ALGORITHM: HS256

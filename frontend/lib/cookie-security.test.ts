@@ -23,8 +23,13 @@ describe("isSecureCookie", () => {
     expect(isSecureCookie(" HTTPS://Auditoria.Exemplo.com.br ")).toBe(true);
   });
 
-  it("sem APP_URL definida, não marca Secure", () => {
+  it("com APP_URL vazia no .env, não marca Secure", () => {
     vi.stubEnv("APP_URL", "");
+    expect(isSecureCookie()).toBe(false);
+  });
+
+  it("com APP_URL ausente do ambiente (undefined), não marca Secure", () => {
+    vi.stubEnv("APP_URL", undefined);
     expect(isSecureCookie()).toBe(false);
   });
 
