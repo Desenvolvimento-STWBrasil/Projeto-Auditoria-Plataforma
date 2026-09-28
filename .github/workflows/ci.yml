@@ -216,7 +216,9 @@ jobs:
         with:
           context: ./${{ matrix.service }}
           platforms: linux/amd64
-          push: ${{ inputs.publish }}
+          # "== true" garante true/false: no PR o input não existe (vazio) e
+          # a action recusa valor vazio ("does not meet YAML 1.2 Core Schema").
+          push: ${{ inputs.publish == true }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
