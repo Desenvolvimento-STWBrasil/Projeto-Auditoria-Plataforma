@@ -1,6 +1,8 @@
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
+import { isSecureCookie } from "./lib/cookie-security";
+
 /**
  * Proxy (substitui middleware.ts — renomeação obrigatória nesta versão do
  * Next.js, "middleware" está deprecado desde a v16.0.0).
@@ -91,14 +93,14 @@ function setSessionCookies(
   response.cookies.set("access_token", tokens.access_token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     path: "/",
     maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
   });
   response.cookies.set("refresh_token", tokens.refresh_token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     path: "/",
     maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
   });

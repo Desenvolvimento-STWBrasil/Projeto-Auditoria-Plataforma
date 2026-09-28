@@ -1,10 +1,20 @@
+# /docker-compose.yml — ambiente LOCAL (ver docs/adr/ADR-001)
+#
+# Modo A — tudo no Docker:     docker compose up -d --build
+#                              site http://localhost:3000 · API http://localhost:8000/docs
+# Modo B — só o banco:         docker compose up -d mysql   → MySQL em 127.0.0.1:3307
+#                              (backend com uvicorn --reload e frontend com npm run dev)
+#
+# Senhas: arquivo .env nesta pasta (modelo: .env.example). Staging e
+# produção NÃO usam este arquivo — ver infra/.
+name: auditoria-local
+
 services:
   mysql:
     image: mysql:8.4
-    container_name: auditoria-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
       MYSQL_DATABASE: auditoria
       MYSQL_USER: auditoria_app
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}
@@ -12,27 +22,23 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${MYSQL_ROOT_PASSWORD:-root_change_me}",
-        ]
+      # $$ = a senha é lida da variável DENTRO do container, na hora do teste.
+      # TCP (127.0.0.1), não socket: no 1º boot o MySQL sobe um servidor
+      # temporário SEM rede para criar o banco; pelo socket ele já responde
+      # e o backend tentava conectar cedo demais (Connection refused).
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=tcp -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 30s
+    ports:
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
 
   backend:
     build:
       context: ./backend
-    container_name: auditoria-backend
     restart: unless-stopped
     depends_on:
       mysql:
@@ -49,18 +55,19 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?defina ADMIN_PASSWORD no .env}
       ALLOW_PUBLIC_REGISTRATION: "false"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - backend_uploads:/app/uploads
 
   frontend:
     build:
       context: ./frontend
-    container_name: auditoria-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
+      APP_URL: http://localhost:3000
       BACKEND_API_URL: http://backend:8000
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       JWT_ALGORITHM: HS256
@@ -68,7 +75,7 @@ services:
       JWT_REFRESH_EXPIRES_DAYS: "7"
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   mysql_data:
