@@ -1,0 +1,90 @@
+# /.github/workflows/release.yml — publica e promove imagens (ADR-001 D2/D4)
+#
+# develop → roda o CI inteiro e publica :sha-<7>, :tree-<40> e :staging
+# main    → NÃO reconstrói: acha a imagem já testada na develop pelo
+#           conteúdo do código (tree) e aponta :prod para o mesmo digest,
+#           depois da aprovação no Environment "production".
+#
+# Ninguém entra na VM daqui: a VM puxa as tags :staging/:prod (INFRA-05).
+name: Release
+
+on:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+# Nunca cancelar no meio: uma promoção interrompida deixaria tags pela metade.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: CI + publicar :staging
+    if: github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/ci.yml
+    with:
+      publish: true
+    permissions:
+      contents: read
+      packages: write
+
+  production:
+    name: Promover para :prod
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Login no GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Se o conteúdo da main nunca passou pela develop (commit direto na
+      # main, conflito resolvido só na main), a tag tree-<...> não existe e
+      # a promoção PARA aqui. Esse é o comportamento desejado.
+      - name: Apontar :prod para a imagem testada no staging
+        run: |
+          set -euo pipefail
+          TREE="$(git rev-parse 'HEAD^{tree}')"
+          BASE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          # 1ª volta: as duas imagens precisam existir antes de mexer em
+          # qualquer tag (evita backend novo com frontend antigo).
+          declare -A DIGESTS
+          for SERVICE in backend frontend; do
+            SRC="$BASE/$SERVICE:tree-$TREE"
+            if ! DIGEST="$(docker buildx imagetools inspect "$SRC" --format '{{json .Manifest.Digest}}' | tr -d '"')"; then
+              echo "::error::$SRC não existe: este conteúdo não foi publicado pela develop. Faça o merge pela develop primeiro."
+              exit 1
+            fi
+            DIGESTS[$SERVICE]="$DIGEST"
+          done
+          # 2ª volta: reaponta as tags para o MESMO digest (não reconstrói).
+          for SERVICE in backend frontend; do
+            DIGEST="${DIGESTS[$SERVICE]}"
+            docker buildx imagetools create \
+              --tag "$BASE/$SERVICE:prod" \
+              --tag "$BASE/$SERVICE:prod-${GITHUB_SHA::7}" \
+              "$BASE/$SERVICE@$DIGEST"
+            # Prova do ADR-001 D4: :prod é byte a byte a imagem do staging.
+            NOW="$(docker buildx imagetools inspect "$BASE/$SERVICE:prod" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+            if [ "$NOW" != "$DIGEST" ]; then
+              echo "::error::$SERVICE:prod ficou com $NOW, esperado $DIGEST (imagem diferente da testada)."
+              exit 1
+            fi
+            echo "$SERVICE: :prod → $DIGEST" | tee -a "$GITHUB_STEP_SUMMARY"
+          done

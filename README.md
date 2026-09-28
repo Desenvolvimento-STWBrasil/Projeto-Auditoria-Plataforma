@@ -85,7 +85,7 @@ Autenticação é feita via **JWT em cookies httpOnly**, com três camadas de ve
 
 - **Docker Compose** (raiz) orquestrando 3 serviços: `mysql` (8.4, utf8mb4), `backend` (FastAPI) e `frontend` (Next.js em modo `standalone`), com volumes nomeados para dados do MySQL e uploads de evidências.
 - O mesmo `docker-compose.yml` da raiz sobe **só o MySQL** (`docker compose up -d mysql`, em `127.0.0.1:3307`) para o desenvolvimento do backend e do frontend fora de containers (Opção B).
-- Dockerfiles dedicados para backend (`python:3.12-slim`) e frontend (build multi-stage `node:20-slim` → runtime standalone).
+- Dockerfiles dedicados para backend (`python:3.12-slim`) e frontend (build multi-stage `node:24-slim` → runtime standalone).
 
 ---
 
@@ -220,17 +220,14 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-### Opção C — Deploy em produção (Docker Compose + Nginx + CI/CD)
+### Opção C — Staging e produção (imagens no GHCR)
 
-A stack de produção roda em 4 serviços (`mysql`, `backend`, `frontend`, `nginx`),
-com o Nginx como único ponto de entrada público (TLS via Let's Encrypt) e deploy
-automatizado por push na `main` via GitHub Actions.
+As imagens são construídas no GitHub Actions e publicadas no GitHub Container Registry (GHCR). A VM não compila nada: ela vai puxar as imagens sozinha (cards INFRA-05 a INFRA-07).
 
-- Arquivos: `docker-compose.prod.yml`, `nginx/nginx.conf`, `.env.prod.example`,
-  `.github/workflows/deploy.yml`.
-- Guia completo (passo a passo, primeiro deploy manual, troubleshooting):
-  [`docs/Code.md`](docs/Code.md#7-guia-prático-de-execução).
-- Decisões e justificativas de arquitetura: [`docs/prd_deploy_producao.md`](docs/prd_deploy_producao.md).
+- `.github/workflows/ci.yml`: roda em todo PR para `develop` e `main` (ruff, pytest, pip-audit, migrations em MySQL 8.4, eslint, tsc, vitest, build e build das imagens, sem publicar).
+- `.github/workflows/release.yml`: o push na `develop` publica as tags `sha-*`, `tree-*` e `staging`; o push na `main`, depois da aprovação, aponta `prod` para a mesma imagem já testada no staging.
+- Fluxo de branches: `feature/*` → PR → `develop` → PR → `main`. Não faça commit direto na `main`: a promoção para `prod` falha se o código não passou pela `develop`.
+- `docker-compose.prod.yml` e `nginx/` ainda são da estrutura antiga e serão substituídos pela pasta `infra/` (INFRA-06).
 
 ---
 
