@@ -1,0 +1,221 @@
+# /.github/workflows/ci.yml — verificação de todo PR (ADR-001 D2/D5)
+#
+# Roda sozinho em PR para develop/main e é chamado pelo release.yml no
+# push da develop (com publish: true), que publica as imagens no GHCR.
+# Em PR nada é publicado e nenhum segredo é usado (o repositório é público).
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_call:
+    inputs:
+      publish:
+        description: "Publica as imagens no GHCR (só o release.yml usa)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Valores falsos, só para o app/core/config.py (Settings) carregar.
+  JWT_SECRET: ci_only_dummy_secret_not_for_production
+  CORS_ALLOWED_ORIGINS: http://localhost:3000
+
+jobs:
+  backend:
+    name: Backend — ruff + pytest + pip-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt pip-audit
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      # Testes em SQLite em memória (tests/conftest.py); a URL abaixo só
+      # satisfaz o Settings na importação do app.
+      - name: Testes (pytest)
+        env:
+          DATABASE_URL: "mysql+pymysql:///:memory:"
+        run: pytest -q
+
+      # PYSEC-2026-1325 (ecdsa, via python-jose): caminho não usado (HS256).
+      # Sai quando o python-jose for trocado pelo PyJWT (DT-SEC-16).
+      - name: Vulnerabilidades (pip-audit)
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325
+
+  migrations:
+    name: Migrations — MySQL 8.4 (upgrade → downgrade → upgrade)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root
+          MYSQL_DATABASE: auditoria
+          MYSQL_USER: auditoria_app
+          MYSQL_PASSWORD: ci_app
+        ports:
+          - 3306:3306
+        # TCP e não socket: o servidor temporário do 1º boot responde pelo
+        # socket antes de aceitar rede (mesma correção do INFRA-02).
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --protocol=tcp -uroot -pci_root --silent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 30s
+    env:
+      DATABASE_URL: mysql+pymysql://auditoria_app:ci_app@127.0.0.1:3306/auditoria
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      # O services: do Actions não aceita "command", então a collation dos
+      # composes (utf8mb4_unicode_ci) é aplicada no banco antes das tabelas.
+      - name: Collation igual à dos composes
+        run: >
+          docker exec ${{ job.services.mysql.id }}
+          mysql -uroot -pci_root
+          -e "ALTER DATABASE auditoria CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+      - name: alembic upgrade head (banco vazio)
+        run: alembic upgrade head
+
+      - name: alembic downgrade base
+        run: alembic downgrade base
+
+      - name: alembic upgrade head (de novo)
+        run: alembic upgrade head
+
+      - name: Revisão final
+        run: alembic current
+
+  frontend:
+    name: Frontend — eslint + tsc + vitest + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Tipos (tsc)
+        run: npx tsc --noEmit
+
+      - name: Testes (vitest)
+        run: npm test
+
+      - name: Build de produção
+        env:
+          BACKEND_API_URL: http://backend:8000
+          JWT_ALGORITHM: HS256
+        run: npm run build
+
+  images:
+    name: Imagens Docker (${{ matrix.service }})
+    needs: [backend, migrations, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Três tags para a mesma imagem:
+      #   sha-<7>    commit que gerou a imagem (rastreio)
+      #   tree-<40>  conteúdo do código: o release.yml acha a imagem da main
+      #              por aqui, qualquer que seja o tipo de merge
+      #   staging    tag móvel que a VM de staging acompanha
+      - name: Nome e tags da imagem
+        id: meta
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.service }}"
+          TREE="$(git rev-parse 'HEAD^{tree}')"
+          {
+            echo "image=$IMAGE"
+            echo "tags<<EOF"
+            echo "$IMAGE:sha-${GITHUB_SHA::7}"
+            echo "$IMAGE:tree-$TREE"
+            echo "$IMAGE:staging"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Login no GHCR
+        if: ${{ inputs.publish }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build${{ inputs.publish && ' e push' || '' }}
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./${{ matrix.service }}
+          platforms: linux/amd64
+          push: ${{ inputs.publish }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
