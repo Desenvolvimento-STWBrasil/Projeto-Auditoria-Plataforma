@@ -1,0 +1,16 @@
+# /infra/systemd/auditoria-deploy@.service — um deploy por pull (ADR-001 D3)
+#
+# %i = ambiente (staging | prod). Disparado pelo auditoria-deploy@.timer;
+# também pode ser rodado na mão: sudo systemctl start auditoria-deploy@staging
+# Resultado: journalctl -u auditoria-deploy@staging
+[Unit]
+Description=Deploy por pull da Plataforma de Auditoria (%i)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/srv/auditoria/bin/deploy.sh %i
+# 1º boot do MySQL + migrations + pull das imagens cabem com folga.
+TimeoutStartSec=20min
