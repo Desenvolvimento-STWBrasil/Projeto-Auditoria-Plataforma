@@ -1,0 +1,17 @@
+# /infra/systemd/auditoria-deploy@.timer — verifica o GHCR a cada 2 min (ADR-001 D3)
+#
+# Ligar por ambiente: sudo systemctl enable --now auditoria-deploy@staging.timer
+# (staging no INFRA-06, prod no INFRA-07).
+[Unit]
+Description=Verifica a cada 2 min se há imagem nova (%i)
+
+[Timer]
+OnBootSec=2min
+# Conta a partir do FIM da última verificação: um deploy demorado não
+# encavala com a próxima volta.
+OnUnitInactiveSec=2min
+# Staging e prod não batem no GHCR no mesmo segundo.
+RandomizedDelaySec=20s
+
+[Install]
+WantedBy=timers.target
