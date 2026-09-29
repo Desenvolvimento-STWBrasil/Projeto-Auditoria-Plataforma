@@ -28,7 +28,7 @@ Nada aqui tem IP, senha ou token. Os segredos ficam só na VM, em
 ## Operação
 
 ```bash
-journalctl -u auditoria-deploy@staging -n 50          # o que o timer fez
+sudo journalctl -u auditoria-deploy@staging -n 50          # o que o timer fez
 sudo /srv/auditoria/bin/deploy.sh staging --force     # reaplica (ex.: depois de editar o .env)
 sudo cat /srv/auditoria/prod/deploy-history.log       # trocas de versão
 ```
