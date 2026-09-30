@@ -13,6 +13,7 @@ Nada aqui tem IP, senha ou token. Os segredos ficam só na VM, em
 | `compose.app.yml` | `/srv/auditoria/staging/compose.yml` e `/srv/auditoria/prod/compose.yml` | INFRA-06 / INFRA-07 |
 | `compose.edge.yml` | `/srv/auditoria/edge/compose.yml` | INFRA-06 |
 | `edge/conf.d/*.conf` | `/srv/auditoria/edge/conf.d/` | INFRA-06 (`prod.conf` no INFRA-07) |
+| `env/staging.env.example` | modelo de `/srv/auditoria/staging/.env` | INFRA-06 |
 
 
 ## Como o deploy funciona

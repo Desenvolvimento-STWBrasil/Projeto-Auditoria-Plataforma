@@ -11,6 +11,9 @@ services:
   edge:
     image: nginx:stable-alpine
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     ports:
       # Staging: só na interface local da VM (acesso por túnel SSH)
       - "127.0.0.1:8081:8081"
