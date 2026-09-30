@@ -1,0 +1,100 @@
+# /infra/compose.app.yml — aplicação de UM ambiente na VM (ADR-001 D1, D2, D6)
+#
+# O mesmo arquivo serve ao staging e à produção. Na VM ele fica em
+# /srv/auditoria/<ambiente>/compose.yml, ao lado do .env do ambiente, e
+# quem o sobe é o deploy.sh (timer auditoria-deploy@<ambiente>).
+# Tudo o que muda entre os ambientes vem do .env: COMPOSE_PROJECT_NAME,
+# IMAGE_TAG, APP_URL e os segredos.
+#
+# Nenhum serviço publica porta. O nginx de borda (compose.edge.yml) chega
+# ao frontend e ao backend pela rede <projeto>-edge, com os nomes
+# <projeto>-frontend e <projeto>-backend.
+name: ${COMPOSE_PROJECT_NAME:?defina COMPOSE_PROJECT_NAME no .env}
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      # O deploy.sh usa estas duas variáveis de dentro do container no backup
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_DATABASE: auditoria
+      MYSQL_USER: auditoria_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no .env}
+    # Dois ambientes devidem 3,8 GiB: buffer pool pequeno (ADR-001).
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
+    healthcheck:
+    # TCP e não socker: no 1º boot o servidor temporário responde pelo socket antes de aceitar conexões de rede (ver docker-compose.yml)
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=tcp -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks: [app]
+
+  backend:
+    image: ${IMAGE_REPO:?defina IMAGE_REPO no .env}/backend:${IMAGE_TAG:?defina IMAGE_TAG no .env}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+        DATABASE_URL: mysql+pymysql://auditoria_app:${MYSQL_PASSWORD}@mysql:3306/auditoria
+        JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+        JWT_ALGORITHM: HS256
+        JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-15}
+        JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
+        CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?defina CORS_ALLOWED_ORIGINS no .env}
+        IS_DEBUG: "false"
+        ALLOW_PUBLIC_REGISTRATION: "false"
+        ADMIN_EMAIL: ${ADMIN_EMAIL:?defina ADMIN_EMAL no .env}
+        ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-Administrador}
+        ADMIN_PASSWORD: ${ADMIN_PASSWORD:?defina ADMIN_PASSWORD mo .env}
+        SMTP_HOST: ${SMTP_HOST:-}
+        SMTP_PORT: ${SMTP_PORT:-587}
+        SMTP_USER: ${SMTP_USER:-}
+        SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+        SMTP_FROM: ${SMTP_FROM:-}
+        SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+    volumes:
+        - backend_uploads:/app/uploads
+    networks:
+        app: {}
+        edge:
+          aliases: ["${COMPOSE_PROJECT_NAME}-backend"]
+
+  frontend:
+    image: ${IMAGE_REPO}/frontend:${IMAGE_TAG}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      APP_URL: ${APP_URL:?defina APP_URL no .env}
+      BACKEND_API_URL: http://backend:8000
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-15}
+      JWT_REFRESH_EXPIRES_DAYS: ${JWT_REFRESH_EXPIRES_DAYS:-7}
+      NODE_ENV: production
+    networks:
+      app: {}
+      edge:
+        aliases: ["${COMPOSE_PROJECT_NAME}-frontend"]
+
+volumes:
+    mysql_data:
+    backend_uploads:
+  
+networks:
+    # Só MySQL, backend e frontend deste ambiente
+    app: {}
+    # Criada pelo compose.edge.yml. Uma rede por ambiente: O staging não alcança os containers da produção
+    edge:
+      external: true
+      name: ${COMPOSE_PROJECT_NAME}-edge

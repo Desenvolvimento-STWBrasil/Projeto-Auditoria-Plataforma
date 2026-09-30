@@ -10,7 +10,10 @@ Nada aqui tem IP, senha ou token. Os segredos ficam só na VM, em
 | `scripts/deploy.sh` | `/srv/auditoria/bin/deploy.sh` | INFRA-05 |
 | `systemd/auditoria-deploy@.service` / `.timer` | `/etc/systemd/system/` | INFRA-05 |
 | `ssh/10-auditoria.conf` | `/etc/ssh/sshd_config.d/` | INFRA-05 |
-| `compose.app.yml` (staging e prod), `compose.edge.yml`, `edge/conf.d/` | `/srv/auditoria/{staging,prod,edge}/` | INFRA-06 / INFRA-07 |
+| `compose.app.yml` | `/srv/auditoria/staging/compose.yml` e `/srv/auditoria/prod/compose.yml` | INFRA-06 / INFRA-07 |
+| `compose.edge.yml` | `/srv/auditoria/edge/compose.yml` | INFRA-06 |
+| `edge/conf.d/*.conf` | `/srv/auditoria/edge/conf.d/` | INFRA-06 (`prod.conf` no INFRA-07) |
+
 
 ## Como o deploy funciona
 
@@ -24,6 +27,22 @@ Nada aqui tem IP, senha ou token. Os segredos ficam só na VM, em
 - Serviços `mysql`, `backend` e `frontend`. O `mysql` tem healthcheck, e o container define `MYSQL_ROOT_PASSWORD` e `MYSQL_DATABASE` (o backup usa os dois).
 - Imagens `${IMAGE_REPO}/backend:${IMAGE_TAG}` e `${IMAGE_REPO}/frontend:${IMAGE_TAG}`.
 - Projeto Compose `auditoria-<ambiente>`.
+
+## Staging
+
+Só por túnel SSH, do PC:
+
+```bash
+ssh -N -L 8081:localhost:8081 auditoria-vm      # deixe aberto
+```
+
+No navegador: `http://localhost:8081` (Swagger em `/docs`). O edge tem que estar no ar antes do 1º deploy de um ambiente, porque é ele que cria as redes `auditoria-<ambiente>-edge`
+
+```bash
+sudo docker compose -f /srv/auditoria/edge/compose.yml up -d --wait
+sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -t   # depois de editar um .conf
+sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -s reload
+```
 
 ## Operação
 

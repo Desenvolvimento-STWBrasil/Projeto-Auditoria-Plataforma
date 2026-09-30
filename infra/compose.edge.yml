@@ -1,0 +1,34 @@
+# /infra/compose.edge.yml — nginx de borda da VM (ADR-001 D6, D8)
+#
+# Único container que publica portas. Na VM fica em
+# /srv/auditoria/edge/compose.yml, com a pasta conf.d/ ao lado.
+# Não é atualizado pelo timer: depois de editar um .conf, rode
+#   sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -t
+#   sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -s reload
+name: auditoria-edge
+
+services:
+  edge:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      # Staging: só na interface local da VM (acesso por túnel SSH)
+      - "127.0.0.1:8081:8081"
+      # Produção (:80) entra no INFRA-07
+    volumes:
+      # Substitui a pasta inteira: O default.conf da imagem sai.
+      - ./conf.d:/etc/nginx/conf.d:ro
+    networks: [auditoria-staging-edge, auditoria-prod-edge]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8081/edge-health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  # "name:" fixo: os composes de cada ambiente se ligam a elas pelo nome
+  # (<COMPOSE_PROJECT_NAME>-edge)
+  auditoria-staging-edge:
+    name: auditoria-staging-edge
+  auditoria-prod-edge:
+    name: auditoria-prod-edge
