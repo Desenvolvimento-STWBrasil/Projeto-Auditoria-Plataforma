@@ -19,6 +19,10 @@ services:
     image: mysql:8.4
     restart: unless-stopped
     logging: *logging
+    # Teto de memória (DT-OPS-16): um ambiente não derruba o outro.
+    mem_limit: ${MYSQL_MEM_LIMIT:-768m}
+    # O InnoDB precisa de tempo para fechar limpo (padrão do Docker: 10s)
+    stop_grace_period: 60s
     environment:
       # O deploy.sh usa estas duas variáveis de dentro do container no backup
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
@@ -32,7 +36,8 @@ services:
       --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
     healthcheck:
       # TCP e não socket: no 1º boot o servidor temporário responde pelo socket antes de aceitar conexões de rede (ver docker-compose.yml)
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --protocol=tcp -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      # MYSQL_PWD em vez de -p: a senha não aparece no ps (DT-SEC-19)
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 --protocol=tcp -uroot --silent"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -45,6 +50,7 @@ services:
     image: ${IMAGE_REPO:?defina IMAGE_REPO no .env}/backend:${IMAGE_TAG:?defina IMAGE_TAG no .env}
     restart: unless-stopped
     logging: *logging
+    mem_limit: ${BACKEND_MEM_LIMIT:-384m}
     depends_on:
       mysql:
         condition: service_healthy
@@ -77,6 +83,7 @@ services:
     image: ${IMAGE_REPO}/frontend:${IMAGE_TAG}
     restart: unless-stopped
     logging: *logging
+    mem_limit: ${FRONTEND_MEM_LIMIT:-384m}
     depends_on:
       backend:
         condition: service_healthy
