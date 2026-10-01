@@ -31,19 +31,44 @@ Nada aqui tem IP, senha ou token. Os segredos ficam só na VM, em
 
 ## Staging
 
+### Instalação (uma vez)
+
+Com os arquivos de `infra/` já na VM (`git archive` + `scp`):
+
+```bash
+sudo install -d -m 755 /srv/auditoria/edge/conf.d
+sudo install -d -m 700 /srv/auditoria/staging
+sudo install -m 644 infra/compose.edge.yml        /srv/auditoria/edge/compose.yml
+sudo install -m 644 infra/edge/conf.d/*.conf      /srv/auditoria/edge/conf.d/
+sudo install -m 600 infra/compose.app.yml         /srv/auditoria/staging/compose.yml
+sudo install -m 600 infra/env/staging.env.example /srv/auditoria/staging/.env
+sudo nano /srv/auditoria/staging/.env              # preencha os segredos
+
+sudo docker compose -f /srv/auditoria/edge/compose.yml up -d --wait   # 1º: cria as redes
+sudo /srv/auditoria/bin/deploy.sh staging --force                     # 1º deploy
+```
+
+O edge tem que estar no ar antes do 1º deploy de um ambiente, porque é ele que cria as redes `auditoria-<ambiente>-edge`.
+
+### Acesso
+
 Só por túnel SSH, do PC:
 
 ```bash
 ssh -N -L 8081:localhost:8081 auditoria-vm      # deixe aberto
 ```
 
-No navegador: `http://localhost:8081` (Swagger em `/docs`). O edge tem que estar no ar antes do 1º deploy de um ambiente, porque é ele que cria as redes `auditoria-<ambiente>-edge`
+No navegador: `http://localhost:8081`. Swagger em `/docs` (o "Try it out" funciona: `/api/v1/` vai direto ao backend, só no staging).
+
+### Edge
 
 ```bash
-sudo docker compose -f /srv/auditoria/edge/compose.yml up -d --wait
-sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -t   # depois de editar um .conf
+sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -t        # depois de editar um .conf
 sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -s reload
+sudo docker compose -f /srv/auditoria/edge/compose.yml up -d --wait              # depois de editar o compose.yml
 ```
+
+**Nunca** rode `docker compose down` no edge com um ambiente no ar: ele para o nginx (os dois ambientes ficam fora) e depois falha ao remover as redes, que ainda têm containers ligados.
 
 ## Operação
 
