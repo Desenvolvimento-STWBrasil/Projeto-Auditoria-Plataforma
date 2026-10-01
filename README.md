@@ -227,7 +227,7 @@ As imagens são construídas no GitHub Actions e publicadas no GitHub Container 
 - `.github/workflows/ci.yml`: roda em todo PR para `develop` e `main` (ruff, pytest, pip-audit, migrations em MySQL 8.4, eslint, tsc, vitest, build e build das imagens, sem publicar).
 - `.github/workflows/release.yml`: o push na `develop` publica as tags `sha-*`, `tree-*` e `staging`; o push na `main`, depois da aprovação, aponta `prod` para a mesma imagem já testada no staging.
 - Fluxo de branches: `feature/*` → PR → `develop` → PR → `main`. Não faça commit direto na `main`: a promoção para `prod` falha se o código não passou pela `develop`.
-- `docker-compose.prod.yml` e `nginx/` ainda são da estrutura antiga e serão substituídos pela pasta `infra/` (INFRA-06).
+- O que roda na VM (edge, staging, produção, deploy, backup e rollback) está em [`infra/README.md`](infra/README.md). `docker-compose.prod.yml`, `nginx/` e `.env.prod.example` são do deploy antigo e não são mais usados.
 
 ---
 

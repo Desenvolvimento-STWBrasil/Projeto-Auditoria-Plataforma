@@ -2,6 +2,8 @@
 .env
 .env.prod
 .env.prod*
+# IPs liberados na produção: só na VM (repo público)
+infra/edge/allow/*.allow
 !.env.prod.example
 .env.local
 .env.local.bak

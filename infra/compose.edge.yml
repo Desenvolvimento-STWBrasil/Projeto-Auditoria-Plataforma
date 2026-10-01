@@ -1,8 +1,8 @@
 # /infra/compose.edge.yml — nginx de borda da VM (ADR-001 D6, D8)
 #
 # Único container que publica portas. Na VM fica em
-# /srv/auditoria/edge/compose.yml, com a pasta conf.d/ ao lado.
-# Não é atualizado pelo timer: depois de editar um .conf, rode
+# /srv/auditoria/edge/compose.yml, com as pastas conf.d/ e allow/ ao lado.
+# Não é atualizado pelo timer: depois de editar um .conf ou um .allow, rode
 #   sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -t
 #   sudo docker compose -f /srv/auditoria/edge/compose.yml exec edge nginx -s reload
 name: auditoria-edge
@@ -17,10 +17,15 @@ services:
     ports:
       # Staging: só na interface local da VM (acesso por túnel SSH)
       - "127.0.0.1:8081:8081"
-      # Produção (:80) entra no INFRA-07
+      # Produção pelo túnel SSH: também só na interface local da VM
+      - "127.0.0.1:8080:8080"
+      # Produção sem túnel: todas as interfaces, só os IPs dos *.allow (prod.conf)
+      - "80:80"
     volumes:
       # Substitui a pasta inteira: O default.conf da imagem sai.
       - ./conf.d:/etc/nginx/conf.d:ro
+      # IPs liberados na produção. Fica só na VM (repo público).
+      - ./allow:/etc/nginx/allow:ro
     networks: [auditoria-staging-edge, auditoria-prod-edge]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8081/edge-health || exit 1"]
@@ -31,7 +36,13 @@ services:
 networks:
   # "name:" fixo: os composes de cada ambiente se ligam a elas pelo nome
   # (<COMPOSE_PROJECT_NAME>-edge)
+  # Sub-rede fixa: a porta 8080 do prod.conf libera o gateway (.1), que é
+  # por onde chega o túnel SSH. Os containers recebem .2 em diante e ficam de fora.
   auditoria-staging-edge:
     name: auditoria-staging-edge
+    ipam:
+      config: [{ subnet: 172.30.1.0/24, gateway: 172.30.1.1 }]
   auditoria-prod-edge:
     name: auditoria-prod-edge
+    ipam:
+      config: [{ subnet: 172.30.2.0/24, gateway: 172.30.2.1 }]

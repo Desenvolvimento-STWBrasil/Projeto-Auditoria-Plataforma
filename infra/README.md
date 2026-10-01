@@ -11,9 +11,12 @@ Nada aqui tem IP, senha ou token. Os segredos ficam só na VM, em
 | `systemd/auditoria-deploy@.service` / `.timer` | `/etc/systemd/system/` | INFRA-05 |
 | `ssh/10-auditoria.conf` | `/etc/ssh/sshd_config.d/` | INFRA-05 |
 | `compose.app.yml` | `/srv/auditoria/staging/compose.yml` e `/srv/auditoria/prod/compose.yml` | INFRA-06 / INFRA-07 |
-| `compose.edge.yml` | `/srv/auditoria/edge/compose.yml` | INFRA-06 |
-| `edge/conf.d/*.conf` | `/srv/auditoria/edge/conf.d/` | INFRA-06 (`prod.conf` no INFRA-07) |
+| `compose.edge.yml` | `/srv/auditoria/edge/compose.yml` | INFRA-06 / INFRA-07 |
+| `edge/conf.d/*.conf` | `/srv/auditoria/edge/conf.d/` | INFRA-06 / INFRA-07 |
+| `edge/allow/stw.allow.example` | modelo de `/srv/auditoria/edge/allow/*.allow` (o real só na VM) | INFRA-07 |
 | `env/staging.env.example` | modelo de `/srv/auditoria/staging/.env` | INFRA-06 |
+| `env/prod.env.example` | modelo de `/srv/auditoria/prod/.env` | INFRA-07 |
+
 
 
 ## Como o deploy funciona
@@ -70,12 +73,48 @@ sudo docker compose -f /srv/auditoria/edge/compose.yml up -d --wait             
 
 **Nunca** rode `docker compose down` no edge com um ambiente no ar: ele para o nginx (os dois ambientes ficam fora) e depois falha ao remover as redes, que ainda têm containers ligados.
 
+## Produção
+
+Acesso principal por túnel SSH, do PC:
+
+```bash
+ssh -N -L 8080:localhost:8080 auditoria-vm      # deixe aberto
+```
+
+No navegador: `http://localhost:8080`. A porta 8080 só existe na interface local da VM. Sem túnel, pela porta 80, só entram os IPs dos arquivos `/srv/auditoria/edge/allow/*.allow`, que ficam só na VM (modelo em `edge/allow/stw.allow.example`). Pasta vazia = ninguém entra sem túnel. Na produção não há Swagger nem `/health`. O login aceita 2 tentativas por minuto por IP (pelo túnel, todos dividem o mesmo IP).
+
+Cada deploy com imagem nova faz um `mysqldump` antes, em `/srv/auditoria/prod/backups/` (ficam os 14 últimos). Os uploads **não** entram no backup.
+
+**Restaurar um backup** (o banco volta ao estado do arquivo, e tudo o que foi gravado depois se perde):
+
+```bash
+sudo systemctl stop auditoria-deploy@prod.timer
+P="sudo docker compose -p auditoria-prod --project-directory /srv/auditoria/prod -f /srv/auditoria/prod/compose.yml --env-file /srv/auditoria/prod/.env"
+$P stop backend frontend
+# Cópia do estado atual antes de apagar (fica fora do rodízio dos 14)
+F_ATUAL="/srv/auditoria/prod/backups/pre-restore-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+$P exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysqldump -uroot --single-transaction --routines --triggers --events --databases "$MYSQL_DATABASE"' | gzip | sudo tee "$F_ATUAL" > /dev/null
+sudo zcat "$F_ATUAL" | tail -n 1                                  # tem que ser "-- Dump completed on …"
+sudo ls -1t /srv/auditoria/prod/backups/                          # escolha o arquivo
+# Apaga o banco: o dump o recria, e as tabelas criadas depois do backup não sobram
+$P exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot -e "DROP DATABASE $MYSQL_DATABASE"'
+sudo gunzip -c /srv/auditoria/prod/backups/<arquivo>.sql.gz | $P exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot'
+# no .env, IMAGE_TAG = a versão que gerou o backup (ver deploy-history.log)
+sudo /srv/auditoria/bin/deploy.sh prod --force
+sudo systemctl start auditoria-deploy@prod.timer
+```
+
+Se o `zcat` não terminar em `Dump completed`, **pare** antes do `DROP`: a cópia do estado atual falhou.
+
 ## Operação
+
 
 ```bash
 sudo journalctl -u auditoria-deploy@staging -n 50          # o que o timer fez
+sudo journalctl -u auditoria-deploy@prod -n 50
 sudo /srv/auditoria/bin/deploy.sh staging --force     # reaplica (ex.: depois de editar o .env)
 sudo cat /srv/auditoria/prod/deploy-history.log       # trocas de versão
+sudo docker stats --no-stream                         # memória de cada container × teto
 ```
 
-**Rollback:** no `.env` do ambiente, troque `IMAGE_TAG` para `sha-<7>` da versão anterior (a revisão está no `deploy-history.log`) e rode `deploy.sh <ambiente> --force`. A tag `sha-<7>` vale também na produção, porque o `:prod` é a mesma imagem publicada pela `develop`. Enquanto a tag fixa estiver no `.env`, o timer não aplica versões novas. Para retomar, volte o valor para `staging` ou `prod`.
+**Rollback:** no `.env` do ambiente, troque `IMAGE_TAG` para `sha-<7>` da versão anterior (a revisão está no `deploy-history.log`; na produção também vale `prod-<7>`, o commit da `main`) e rode `deploy.sh <ambiente> --force`. A tag `sha-<7>` vale também na produção, porque o `:prod` é a mesma imagem publicada pela `develop`. Enquanto a tag fixa estiver no `.env`, o timer não aplica versões novas. Para retomar, volte o valor para `staging` ou `prod`.
