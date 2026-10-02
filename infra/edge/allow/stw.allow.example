@@ -1,0 +1,6 @@
+# /infra/edge/allow/stw.allow.example — modelo de um arquivo de allow
+#
+# Copie para /srv/auditoria/edge/allow/stw.allow NA VM e troque o IP.
+# Nunca commite o .allow de verdade (repo público; ver .gitignore).
+# Depois: nginx -t e nginx -s reload (comandos no compose.edge.yml).
+# allow 203.0.113.10;   # saída da STW, conferida em AAAA-MM-DD e AAAA-MM-DD

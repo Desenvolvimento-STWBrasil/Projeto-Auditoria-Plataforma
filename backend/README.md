@@ -16,18 +16,23 @@ API REST construída com **FastAPI + SQLAlchemy + MySQL (Docker)**.
 
 ### 1. Subir o banco de dados (MySQL via Docker)
 
-```bash
-cd backend
-docker compose up -d
-```
-
-Verifique se o container está rodando:
+O MySQL sobe pelo `docker-compose.yml` da **raiz** do projeto (pasta `Developer/`), não por esta pasta:
 
 ```bash
-docker ps
+cd ..                             # raiz (Developer/)
+cp .env.example .env              # só na primeira vez; preencha TODAS as variáveis
+docker compose up -d mysql
 ```
 
-O container `auditoria-mysql` deve aparecer na lista.
+Verifique se o container está saudável:
+
+```bash
+docker compose ps
+```
+
+O serviço `mysql` (container `auditoria-local-mysql-1`) deve aparecer como `(healthy)`, publicado em `127.0.0.1:3307`. Depois volte para esta pasta (`cd backend`).
+
+> O `MYSQL_PASSWORD` do `.env` da raiz tem de ser a mesma senha da `DATABASE_URL` do `backend/.env`.
 
 ---
 
@@ -115,8 +120,10 @@ Se você quer aprender SQL e consultar tudo manualmente, use o terminal interati
 ### 1. Entrar no MySQL interativo (dentro do container)
 
 ```bash
-docker exec -it auditoria-mysql mysql -uauditoria_app -p -D auditoria
+# na raiz (Developer/)
+docker compose exec mysql mysql -uauditoria_app -p -D auditoria
 ```
+
 
 ### 2. Comandos básicos (executar dentro do prompt `mysql>`)
 
@@ -177,8 +184,9 @@ ALTER TABLE users AUTO_INCREMENT = 1;
 Basta executar na ordem:
 
 ```bash
-# 1. Garantir que o banco está rodando
-docker compose up -d
+# 1. Garantir que o banco está rodando (na raiz, Developer/)
+docker compose up -d mysql
+cd backend
 
 # 2. Ativar o ambiente virtual
 source venv/Scripts/activate    # Git Bash
@@ -192,15 +200,20 @@ uvicorn app.main:app --reload
 
 ## Parar o banco
 
-```bash
-docker compose down
-```
-
-Para remover também os dados (reset completo):
+Na raiz (`Developer/`):
 
 ```bash
-docker compose down -v
+docker compose stop mysql
 ```
+
+Para apagar **só** os dados do banco (reset do MySQL):
+
+```bash
+docker compose rm -sf mysql
+docker volume rm auditoria-local_mysql_data
+```
+
+> Evite `docker compose down -v` para isso: ele também apaga o volume `backend_uploads` (evidências enviadas no Modo A).
 
 ---
 
@@ -217,7 +230,6 @@ backend/
 │   └── services/       # Lógica de negócio
 ├── alembic/            # Migrations do banco
 ├── scripts/            # Seeds (admin, catálogo)
-├── docker-compose.yml  # MySQL via Docker
 ├── requirements.txt    # Dependências Python
 └── .env.example        # Exemplo de variáveis de ambiente
 ```

@@ -84,8 +84,8 @@ Autenticação é feita via **JWT em cookies httpOnly**, com três camadas de ve
 ### Infraestrutura
 
 - **Docker Compose** (raiz) orquestrando 3 serviços: `mysql` (8.4, utf8mb4), `backend` (FastAPI) e `frontend` (Next.js em modo `standalone`), com volumes nomeados para dados do MySQL e uploads de evidências.
-- Compose auxiliar em `backend/docker-compose.yml` para subir apenas o MySQL localmente durante o desenvolvimento do backend fora de containers.
-- Dockerfiles dedicados para backend (`python:3.12-slim`) e frontend (build multi-stage `node:20-slim` → runtime standalone).
+- O mesmo `docker-compose.yml` da raiz sobe **só o MySQL** (`docker compose up -d mysql`, em `127.0.0.1:3307`) para o desenvolvimento do backend e do frontend fora de containers (Opção B).
+- Dockerfiles dedicados para backend (`python:3.12-slim`) e frontend (build multi-stage `node:24-slim` → runtime standalone).
 
 ---
 
@@ -144,7 +144,7 @@ Pré-requisitos: Docker Desktop.
    ```bash
    python -c "import secrets; print(secrets.token_hex(32))"
    ```
-   Na raiz do projeto, crie um arquivo `.env` com as variáveis exigidas pelo `docker-compose.yml`, usando o valor gerado acima em `JWT_SECRET`:
+   Na raiz do projeto, copie `.env.example` para `.env` e preencha as variáveis exigidas pelo `docker-compose.yml`, usando o valor gerado acima em `JWT_SECRET`:
    ```
    MYSQL_ROOT_PASSWORD=defina_uma_senha
    MYSQL_PASSWORD=defina_uma_senha
@@ -160,8 +160,8 @@ Pré-requisitos: Docker Desktop.
    O `docker-entrypoint.sh` do backend já roda `alembic upgrade head` e garante o usuário admin (via `scripts/seed_admin.py`) automaticamente na subida do container — não é preciso fazer isso manualmente.
 3. (Opcional) Popule o catálogo de controles e/ou os templates de quadro:
    ```bash
-   docker compose exec backend python scripts/seed_catalog.py
-   docker compose exec backend python scripts/seed_dashboard_templates.py
+   docker compose exec backend python -m scripts.seed_catalog
+   docker compose exec backend python -m scripts.seed_dashboard_templates
    ```
 4. Acesse:
    - Frontend: http://localhost:3000
@@ -172,17 +172,22 @@ Pré-requisitos: Docker Desktop.
 #### Backend
 
 ```bash
+# Na RAIZ (Developer/): sobe só o MySQL em 127.0.0.1:3307
+docker compose up -d mysql
+docker compose ps                  # mysql deve aparecer como (healthy)
+
 cd backend
-docker compose up -d              # sobe só o MySQL (porta 3307)
 cp .env.example .env               # ajuste DATABASE_URL, JWT_SECRET, etc.
 python -m venv venv
 source venv/Scripts/activate       # Git Bash (ou venv\Scripts\activate no PowerShell)
 pip install -r requirements.txt
 alembic upgrade head
-python scripts/seed_admin.py       # cria o usuário admin inicial
-python scripts/seed_catalog.py     # popula o catálogo de controles
+python -m scripts.seed_admin       # cria o usuário admin inicial
+python -m scripts.seed_catalog     # popula o catálogo de controles
 uvicorn app.main:app --reload      # API em http://localhost:8000/docs
 ```
+
+> O MySQL lê as senhas do `.env` da **raiz**, não do `backend/.env`. Mesmo subindo só o `mysql`, o Compose valida o arquivo inteiro: o `.env` da raiz precisa ter **todas** as variáveis do `.env.example` preenchidas (inclusive `JWT_SECRET` e `ADMIN_PASSWORD`), senão ele para com `defina ... no .env`. O `MYSQL_PASSWORD` da raiz tem de ser a mesma senha da `DATABASE_URL` em `backend/.env`.
 
 Detalhes adicionais (consultas SQL manuais, reset de dados) estão em [`backend/README.md`](backend/README.md).
 
@@ -215,17 +220,14 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-### Opção C — Deploy em produção (Docker Compose + Nginx + CI/CD)
+### Opção C — Staging e produção (imagens no GHCR)
 
-A stack de produção roda em 4 serviços (`mysql`, `backend`, `frontend`, `nginx`),
-com o Nginx como único ponto de entrada público (TLS via Let's Encrypt) e deploy
-automatizado por push na `main` via GitHub Actions.
+As imagens são construídas no GitHub Actions e publicadas no GitHub Container Registry (GHCR). A VM não compila nada: ela vai puxar as imagens sozinha (cards INFRA-05 a INFRA-07).
 
-- Arquivos: `docker-compose.prod.yml`, `nginx/nginx.conf`, `.env.prod.example`,
-  `.github/workflows/deploy.yml`.
-- Guia completo (passo a passo, primeiro deploy manual, troubleshooting):
-  [`docs/Code.md`](docs/Code.md#7-guia-prático-de-execução).
-- Decisões e justificativas de arquitetura: [`docs/prd_deploy_producao.md`](docs/prd_deploy_producao.md).
+- `.github/workflows/ci.yml`: roda em todo PR para `develop` e `main` (ruff, pytest, pip-audit, migrations em MySQL 8.4, eslint, tsc, vitest, build e build das imagens, sem publicar).
+- `.github/workflows/release.yml`: o push na `develop` publica as tags `sha-*`, `tree-*` e `staging`; o push na `main`, depois da aprovação, aponta `prod` para a mesma imagem já testada no staging.
+- Fluxo de branches: `feature/*` → PR → `develop` → PR → `main`. Não faça commit direto na `main`: a promoção para `prod` falha se o código não passou pela `develop`.
+- O que roda na VM (edge, staging, produção, deploy, backup e rollback) está em [`infra/README.md`](infra/README.md). `docker-compose.prod.yml`, `nginx/` e `.env.prod.example` são do deploy antigo e não são mais usados.
 
 ---
 
@@ -269,7 +271,7 @@ O cliente, do seu lado, acessa **Meus Controles** para enviar evidências (uploa
 
 ```
 Developer/
-├── docker-compose.yml        # Orquestra mysql + backend + frontend (stack completa)
+├── docker-compose.yml        # Local: stack completa (Opção A) ou só o MySQL (Opção B)
 ├── backend/                  # API — FastAPI + SQLAlchemy + MySQL
 │   ├── app/
 │   │   ├── api/v1/           # Rotas HTTP (auth, admin, client, dashboard, empresas, mensagens...)
@@ -282,8 +284,7 @@ Developer/
 │   │   └── services/          # Regras de negócio (relatórios PDF, storage, templates, e-mail...)
 │   ├── alembic/versions/      # Histórico de migrações do banco (ver Changelog acima)
 │   ├── scripts/               # Seeds e utilitários de manutenção
-│   ├── tests/                 # 300+ testes (pytest, SQLite em memória)
-│   └── docker-compose.yml     # MySQL isolado para desenvolvimento local
+│   └── tests/                 # 300+ testes (pytest, SQLite em memória)
 ├── frontend/                  # Next.js 16 (App Router)
 │   ├── app/
 │   │   ├── public/            # Login e cadastro (rotas públicas)

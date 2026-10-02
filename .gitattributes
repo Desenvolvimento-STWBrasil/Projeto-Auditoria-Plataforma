@@ -1,0 +1,6 @@
+# Scripts executados dentro de containers Linux: sempre LF, mesmo com
+# core.autocrlf=true no Windows (CRLF quebra o "#!/bin/sh" do entrypoint).
+*.sh text eol=lf
+
+# Tudo em infra/ vai para a VM Linux (bash, systemd, sshd): sempre LF.
+infra/** text eol=lf
